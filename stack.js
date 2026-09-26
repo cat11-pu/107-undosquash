@@ -1,13 +1,48 @@
-// stack.js：撤销栈的压入与合并（基线：不合并、不上限、撤销直接清空）
+// stack.js：撤销栈的压入与合并、撤销与重做
+function emptyStackError() {
+  const error = new Error("E_EMPTY_STACK");
+  error.code = "E_EMPTY_STACK";
+  return error;
+}
+
 export function push(stack, entry, window, limit) {
-  stack.push(entry);
-  return { stack: stack, merged: false, truncated: 0 };
+  let merged = false;
+  let truncated = 0;
+  const top = stack[stack.length - 1];
+  if (top && top.item === entry.item && (top.merges || 0) < window) {
+    top.after = entry.after;
+    top.merges = (top.merges || 0) + 1;
+    merged = true;
+  } else {
+    stack.push({ item: entry.item, before: entry.before, after: entry.after, merges: entry.merges || 0 });
+  }
+  while (stack.length > limit) {
+    stack.shift();
+    truncated += 1;
+  }
+  return { stack: stack, merged: merged, truncated: truncated };
 }
 
 export function undo(stack, redo, items, count) {
-  return { stack: [], redo: [], items: items, undone: 0 };
+  let undone = 0;
+  for (let i = 0; i < count; i += 1) {
+    if (!stack.length) throw emptyStackError();
+    const entry = stack.pop();
+    items[entry.item] = entry.before;
+    redo.push(entry);
+    undone += 1;
+  }
+  return { stack: stack, redo: redo, items: items, undone: undone };
 }
 
 export function redo(stack, redo, items, count) {
-  return { stack: stack, redo: [], items: items, redone: 0 };
+  let redone = 0;
+  for (let i = 0; i < count; i += 1) {
+    if (!redo.length) throw emptyStackError();
+    const entry = redo.pop();
+    items[entry.item] = entry.after;
+    stack.push(entry);
+    redone += 1;
+  }
+  return { stack: stack, redo: redo, items: items, redone: redone };
 }
