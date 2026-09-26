@@ -1,6 +1,5 @@
 // ui.js：撤销栈控制台（值条 + 栈视图 + 逐步执行）
 import { push, undo, redo } from "./stack.js";
-import { applyOps } from "./apply.js";
 
 export function mount(spec, parts) {
   let queue = (spec.ops || []).map(function (op) { return Object.assign({}, op); });
@@ -12,19 +11,25 @@ export function mount(spec, parts) {
     if (kind === "next") {
       if (!queue.length) { state.note = "没有待执行的操作了"; return; }
       const op = queue.shift();
-      const result = applyOps(
-        Object.keys(state.items).map(function (id) { return { id: id, value: state.items[id] }; }),
-        [op], queue.map(function (other) { return other.op_id; }),
-        { merge_window: options.merge_window, limit: options.limit, undos: 0, redos: 0 });
-      state.items = result.items || state.items;
-      state.stack = result.stack || state.stack;
-      state.redo = result.redo || state.redo;
-      state.merges += result.merges || 0;
+      if (!Object.prototype.hasOwnProperty.call(state.items, op.item)) {
+        state.note = "未知元素 " + op.item + "（E_BAD_TARGET）";
+        return;
+      }
+      if (state.redo.length) {
+        state.truncated += state.redo.length;
+        state.redo = [];
+      }
+      const before = state.items[op.item];
+      state.items[op.item] = op.value;
+      const result = push(state.stack,
+        { item: op.item, before: before, after: op.value, merges: 0 },
+        options.merge_window, options.limit);
+      state.stack = result.stack;
+      if (result.merged) state.merges += 1;
       state.truncated += result.truncated || 0;
       state.note = "执行了 " + op.op_id + "：" + op.item + " = " + op.value;
       return;
     }
-    const asItems = Object.keys(state.items).map(function (id) { return { id: id, value: state.items[id] }; });
     if (kind === "undo") {
       if (!state.stack.length) { state.note = "撤销栈是空的"; return; }
       const result = undo(state.stack, state.redo, state.items, 1);
