@@ -1,0 +1,17 @@
+{
+  "bad_target_code": "E_BAD_TARGET",
+  "empty_stack_code": "E_EMPTY_STACK",
+  "limit": 2,
+  "merge_window": 2,
+  "items": [{"id": "a", "value": 10}, {"id": "b", "value": 20}],
+  "applied": ["o1"],
+  "ops": [
+    {"op_id": "o1", "item": "a", "value": 10},
+    {"op_id": "o2", "item": "a", "value": 14},
+    {"op_id": "o3", "item": "a", "value": 18},
+    {"op_id": "o4", "item": "b", "value": 26},
+    {"op_id": "o5", "item": "a", "value": 30}
+  ],
+  "undos": 1,
+  "redos": 1
+}
